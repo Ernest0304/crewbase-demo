@@ -10,7 +10,7 @@ const COPY = {
   // ---- app chrome -----------------------------------------------------
   "app.title":        "CrewBASE",
   "app.sub":          "Site Handover & Tasks",
-  "app.by":           "by KitchenBASE",
+  "app.by":           "by Smart City Kitchens",
   "nav.today":        "Today",
   "nav.log":          "Log",
   "nav.leave":        "Handover",
