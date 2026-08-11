@@ -1,16 +1,11 @@
 {
-  "name": "CrewBASE \u00b7 Site Handover",
+  "name": "CrewBASE · Site Handover",
   "short_name": "CrewBASE",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#F2F2F2",
   "theme_color": "#000000",
   "icons": [
-    {
-      "src": "logo.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "any"
-    }
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }
