@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#000000">
+<title>CrewBASE — demo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+<link rel="icon" href="icon.svg?v=4" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+</head>
+<body>
+<div class="demo-note">
+  <strong>Demo.</strong> Sample data, no backend — every name, kitchen and
+  fault below is invented. Any 4 digits work as a PIN.
+</div>
+
+
+<!-- ============ login / register (full-screen, shown when no session) -->
+<section id="scr-login" class="screen login" hidden>
+  <header class="login-hero">
+    <img class="login-logo" src="icon.svg?v=4" alt="">
+    <h1 data-copy="app.title"></h1>
+    <p class="login-sub" data-copy="app.sub"></p>
+    <p class="login-by" data-copy="app.by"></p>
+  </header>
+
+  <div class="login-card">
+  <!-- step 1: pick your name -->
+  <div id="login-pick">
+    <!-- Filled in from this device's own history; stays hidden on a phone
+         nobody has signed in on yet, and while a search is being typed. -->
+    <div id="login-recent" hidden>
+      <!-- text set by renderRecent: it depends on how many people are listed -->
+      <p class="field-label"></p>
+      <ul id="login-recent-list" class="recentlist"></ul>
+    </div>
+    <p class="field-label" data-copy="login.title"></p>
+    <div class="searchwrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="login-search" type="search" autocomplete="off" data-copy-ph="login.search">
+    </div>
+    <ul id="login-names" class="namelist"></ul>
+    <p id="login-empty" class="muted" data-copy="login.empty" hidden></p>
+    <button id="login-to-register" class="btn ghost" data-copy="login.register"></button>
+  </div>
+
+  <!-- step 2a: existing PIN -->
+  <div id="login-pin" hidden>
+    <button class="linkback" data-back data-copy="common.back"></button>
+    <h2 id="login-pin-name"></h2>
+    <p data-copy="login.pin.title"></p>
+    <input id="login-pin-input" class="pin" type="password" inputmode="numeric"
+           maxlength="4" autocomplete="off" placeholder="••••">
+    <button id="login-pin-go" class="btn primary" data-copy="login.pin.go"></button>
+    <p class="muted small" data-copy="login.pin.forgot"></p>
+  </div>
+
+  <!-- step 2b: first login, claim a PIN -->
+  <div id="login-claim" hidden>
+    <button class="linkback" data-back data-copy="common.back"></button>
+    <h2 id="login-claim-name"></h2>
+    <p data-copy="claim.title"></p>
+    <p class="muted small" data-copy="claim.hint"></p>
+    <label data-copy="claim.pin"></label>
+    <input id="claim-pin1" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <label data-copy="claim.pin2"></label>
+    <input id="claim-pin2" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <button id="claim-go" class="btn primary" data-copy="claim.go"></button>
+  </div>
+
+  <!-- step 2c: register a new person -->
+  <div id="login-reg" hidden>
+    <button class="linkback" data-back data-copy="common.back"></button>
+    <h2 data-copy="reg.title"></h2>
+    <label data-copy="reg.name"></label>
+    <input id="reg-name" type="text" autocomplete="name" data-copy-ph="reg.name.ph">
+    <label data-copy="reg.sites"></label>
+    <div id="reg-sites" class="chips"></div>
+    <label data-copy="reg.role"></label>
+    <input id="reg-role" type="text" autocomplete="off" data-copy-ph="reg.role.ph">
+    <label data-copy="reg.pin"></label>
+    <input id="reg-pin1" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <label data-copy="reg.pin2"></label>
+    <input id="reg-pin2" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <button id="reg-go" class="btn primary" data-copy="reg.go"></button>
+  </div>
+  </div><!-- /login-card -->
+</section>
+
+<!-- ============ today ================================================= -->
+<section id="scr-today" class="screen withnav" hidden>
+  <header class="hero-head">
+    <div class="hero-top">
+      <div>
+        <p id="greet-date" class="hero-date"></p>
+        <h1 id="greet-line"></h1>
+        <p id="greet-sub"></p>
+      </div>
+      <div class="who">
+        <span id="who-avatar" class="avatar"></span>
+        <button id="btn-logout" class="linkbtn" data-copy="common.logout"></button>
+      </div>
+    </div>
+    <div id="today-sites" class="chips scroll-x hero-chips"></div>
+  </header>
+  <div id="today-stats" class="stats float"></div>
+  <div class="toolbar">
+    <div class="searchwrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="today-search" type="search" autocomplete="off" data-copy-ph="today.search">
+    </div>
+  </div>
+  <div id="today-segs" class="chips seg"></div>
+  <p id="today-review" class="reviewline" hidden></p>
+  <ul id="today-list" class="cards"></ul>
+  <div id="today-empty" class="empty" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="8" y="2" width="8" height="4" rx="1"/>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <path d="m9 14 2 2 4-4"/>
+    </svg>
+    <p class="bigmsg" data-copy="today.empty" style="margin:0"></p>
+  </div>
+</section>
+
+<!-- ============ log an item =========================================== -->
+<section id="scr-log" class="screen withnav" hidden>
+  <header class="hero-head tight">
+    <p class="hero-date" data-copy="log.kicker"></p>
+    <h1 data-copy="log.title"></h1>
+    <p class="hero-sub" data-copy="log.sub"></p>
+    <div id="log-sites" class="chips scroll-x hero-chips"></div>
+  </header>
+  <label data-copy="log.loc"></label>
+  <div class="locwrap">
+    <input id="log-loc" type="text" autocomplete="off" data-copy-ph="log.loc.ph">
+    <button id="log-pick-kitchen" type="button" class="locbtn" aria-label="Pick a kitchen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+    </button>
+  </div>
+  <label data-copy="log.task"></label>
+  <textarea id="log-task" rows="3" data-copy-ph="log.task.ph"></textarea>
+  <label data-copy="urg.label"></label>
+  <div id="log-urgency" class="chips"></div>
+  <label data-copy="media.label"></label>
+  <button id="log-attach" type="button" class="attachrow">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    <span id="log-attach-label"></span>
+  </button>
+  <input id="log-files" type="file" accept="image/*,video/*" multiple hidden>
+  <label data-copy="log.next"></label>
+  <input id="log-next" type="text" autocomplete="off" data-copy-ph="log.next.ph">
+  <button id="log-go" class="btn primary" data-copy="log.go"></button>
+</section>
+
+<!-- ============ moves (on/offboarding) ================================ -->
+<section id="scr-moves" class="screen withnav" hidden>
+  <header class="hero-head">
+    <p class="hero-date" data-copy="mv.kicker"></p>
+    <h1 data-copy="mv.title"></h1>
+    <p class="hero-sub" data-copy="mv.sub"></p>
+    <div id="mv-sites" class="chips scroll-x hero-chips"></div>
+  </header>
+  <div id="mv-stats" class="stats float"></div>
+  <ul id="mv-list" class="cards"></ul>
+  <div id="mv-renewals"></div>
+  <p id="mv-empty" class="bigmsg" data-copy="mv.empty" hidden></p>
+</section>
+
+<!-- ============ before-leave walkthrough ============================== -->
+<section id="scr-leave" class="screen withnav" hidden>
+  <header class="hero-head">
+    <p class="hero-date" data-copy="leave.kicker"></p>
+    <h1 data-copy="leave.heading"></h1>
+    <p class="hero-sub" data-copy="leave.sub"></p>
+    <div id="leave-sites" class="chips scroll-x hero-chips"></div>
+  </header>
+  <div id="leave-intro">
+    <div id="leave-stats" class="stats float"></div>
+    <p id="leave-review" class="reviewline" hidden></p>
+    <button id="leave-start" class="btn primary" data-copy="leave.start"></button>
+  </div>
+  <div id="leave-walk" hidden>
+    <p id="leave-progress" class="muted center"></p>
+    <div id="leave-card"></div>
+    <button id="leave-next" class="btn ghost" data-copy="leave.unchanged"></button>
+  </div>
+  <div id="leave-done" hidden>
+    <p class="bigmsg" data-copy="leave.done.title"></p>
+    <p id="leave-done-body" class="muted center"></p>
+  </div>
+</section>
+
+<!-- ============ bottom navigation (SVG icons — Lucide outlines) ======= -->
+<nav id="nav" hidden>
+  <div class="nav-inner">
+    <button data-nav="today" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="8" y="2" width="8" height="4" rx="1"/>
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+        <path d="M9 12h6M9 16h6"/>
+      </svg>
+      <span data-copy="nav.today"></span>
+    </button>
+    <button data-nav="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 12h8M12 8v8"/>
+      </svg>
+      <span data-copy="nav.log"></span>
+    </button>
+    <button data-nav="moves">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <path d="m10 17 5-5-5-5"/>
+        <path d="M15 12H3"/>
+      </svg>
+      <span data-copy="nav.moves"></span>
+    </button>
+    <button data-nav="leave">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8 3 4 7l4 4"/>
+        <path d="M4 7h16"/>
+        <path d="m16 21 4-4-4-4"/>
+        <path d="M20 17H4"/>
+      </svg>
+      <span data-copy="nav.leave"></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ============ item detail / action sheets =========================== -->
+<div id="sheet-backdrop" hidden></div>
+<div id="sheet" role="dialog" aria-modal="true" hidden></div>
+
+<div id="toast" hidden></div>
+
+<script src="js/copy.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
