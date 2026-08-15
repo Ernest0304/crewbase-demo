@@ -19,15 +19,20 @@ const session = {
   get token()  { return sessionStorage.getItem("d.token") || ""; },
   get name()   { return sessionStorage.getItem("d.name") || ""; },
   get sites()  { try { return JSON.parse(sessionStorage.getItem("d.sites")) || []; } catch { return []; } },
+  get home()   { try { return JSON.parse(sessionStorage.getItem("d.home")) || this.sites; } catch { return []; } },
   get idleMs() { return Date.now() - parseInt(sessionStorage.getItem("d.touched") || "0", 10); },
   touch()      { sessionStorage.setItem("d.touched", String(Date.now())); },
   save(a)      {
     sessionStorage.setItem("d.token", a.token);
     sessionStorage.setItem("d.name", a.name);
-    sessionStorage.setItem("d.sites", JSON.stringify(a.sites));
+    this.setSites(a.sites, a.home_sites);
     this.touch();
   },
-  clear() { ["d.token","d.name","d.sites","d.touched"].forEach((k) => sessionStorage.removeItem(k)); },
+  setSites(sites, home) {
+    sessionStorage.setItem("d.sites", JSON.stringify(sites || []));
+    sessionStorage.setItem("d.home", JSON.stringify(home || sites || []));
+  },
+  clear() { ["d.token","d.name","d.sites","d.home","d.touched"].forEach((k) => sessionStorage.removeItem(k)); },
 };
 
 const RECENT_KEY = "d.recent", RECENT_MAX = 3;
@@ -138,7 +143,8 @@ const Api = {
     const who = STAFF.find((s) => s.id === id);
     if (!who) throw new ApiError(404, "Unknown");
     if (!/^\d{4}$/.test(pin)) throw new ApiError(401, "Wrong PIN");
-    return { id: who.id, token: "demo", name: who.label, sites: who.sites };
+    return { id: who.id, token: "demo", name: who.label,
+             sites: who.sites, home_sites: who.sites };
   },
   async claim(id, pin) { return this.login(id, pin); },
   async register(p) {
@@ -146,7 +152,8 @@ const Api = {
     const id = "d-" + p.name.toLowerCase().replace(/[^a-z]/g, "").slice(0, 12);
     const sites = p.sites === "All" ? SITES.map((s) => s.code) : p.sites.split(/\s*,\s*/);
     STAFF.push({ id, label: p.name.split(/\s+/).slice(0, 2).join(" "), sites });
-    return { id, token: "demo", name: p.name.split(/\s+/).slice(0, 2).join(" "), sites };
+    return { id, token: "demo", name: p.name.split(/\s+/).slice(0, 2).join(" "),
+             sites, home_sites: sites };
   },
 
   async items(site) {

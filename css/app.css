@@ -574,6 +574,12 @@ button.addtile:hover { border-color: var(--ink); color: var(--ink); }
 #nav button:active span:first-child { transform: scale(0.9); }
 #nav button span:first-child { transition: transform 120ms ease; }
 
+/* ---- scroll hint: the row fades where it continues --------------------- */
+.scroll-x.more {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+}
+
 /* Demo banner — says what the page is before anyone has to ask. */
 .demo-note {
   position: sticky; top: 0; z-index: 50;

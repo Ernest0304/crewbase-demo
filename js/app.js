@@ -444,9 +444,16 @@ function renderRegisterForm() {
     const c = el("button", "chip", s.label);
     c.type = "button";
     c.dataset.code = s.code;
-    c.addEventListener("click", () => c.classList.toggle("on"));
+    c.addEventListener("click", () => {
+      c.classList.toggle("on");
+      // Past the self-service cap, tell them now that it will wait on a
+      // manager — better than a surprise after they submit.
+      const n = wrap.querySelectorAll(".chip.on").length;
+      $("reg-sites-note").hidden = n <= 3;
+    });
     return c;
   }));
+  $("reg-sites-note").hidden = true;
   ["reg-name", "reg-role", "reg-pin1", "reg-pin2"].forEach((id) => { $(id).value = ""; });
 }
 
@@ -458,9 +465,11 @@ $("reg-go").addEventListener("click", async (ev) => {
   if (p1 !== p2) { toast(t("claim.mismatch")); return; }
   busy(ev.target, true);
   try {
-    await afterAuth(await Api.register({
+    const res = await Api.register({
       name, pin: p1, sites, role: $("reg-role").value,
-    }));
+    });
+    if (res.pending) { showPending(res.detail); return; }
+    await afterAuth(res);
   } catch (e) {
     if (e.detail && e.detail.startsWith("ALREADY_REGISTERED:")) {
       const existingId = e.detail.split(":")[1];
@@ -485,11 +494,13 @@ $("reg-go").addEventListener("click", async (ev) => {
         dup.addEventListener("click", async () => {
           busy(dup, true);
           try {
-            await afterAuth(await Api.register({
+            const r2 = await Api.register({
               name, pin: p1, sites, role: $("reg-role").value,
               allow_duplicate: true,
-            }));
+            });
             closeSheet();
+            if (r2.pending) { showPending(r2.detail); return; }
+            await afterAuth(r2);
           } catch (e2) { handleError(e2); }
           finally { busy(dup, false); }
         });
@@ -499,32 +510,74 @@ $("reg-go").addEventListener("click", async (ev) => {
   } finally { busy(ev.target, false); }
 });
 
+/* A registration that asked for more sites than self-service allows is
+ * written but held for a manager to approve — it returns no session, so
+ * there is nothing to log in as yet. Say so plainly and send them back to
+ * the name list; their name appears there once the manager activates it. */
+function showPending(detail) {
+  openSheet((sheet) => {
+    sheet.append(
+      el("h2", "", t("reg.pending.title")),
+      el("p", "muted", detail || t("reg.pending.body")),
+    );
+    const ok = el("button", "btn primary", t("reg.pending.ok"));
+    ok.addEventListener("click", () => { closeSheet(); enterLogin(); });
+    sheet.append(ok);
+  });
+}
+
 /* ---------- today --------------------------------------------------------- */
 
 function mySites() {
-  const mine = session.sites.filter((s) => App.meta.sites.some((m) => m.code === s));
-  return mine.length ? mine : App.meta.sites.map((s) => s.code);
+  // The server sends this list ordered own-sites-first (a manager's own
+  // facilities, then colleagues'). No fallback to every site: a person
+  // with no sites assigned sees an empty board, not the whole company.
+  return session.sites.filter((s) => App.meta.sites.some((m) => m.code === s));
 }
 
 function currentSite() {
   return App.site || mySites()[0];
 }
 
-function renderSiteChips(container, selected, onPick, withAll, everySite) {
-  // Planning views (Moves) show every site; day-to-day views stay
-  // scoped to the person's own sites.
-  const codes = everySite ? App.meta.sites.map((s) => s.code) : [...mySites()];
-  const chips = codes.map((code) => {
-    const c = el("button", "chip" + (code === selected ? " on" : ""), code);
+function renderSiteChips(container, selected, onPick, withAll) {
+  // Every view is scoped to the sites this person may see. For a manager
+  // that is all eleven, own facilities first — so the row reads
+  // [ own sites | All | everyone else's ]: the chips they touch daily sit
+  // on screen, All is one thumb away, and colleagues' sites (needed when
+  // covering leave) wait behind a swipe.
+  const codes = [...mySites()];
+  const chip = (code, label) => {
+    const c = el("button", "chip" + (code === selected ? " on" : ""), label || code);
     c.addEventListener("click", () => onPick(code));
     return c;
-  });
-  if (withAll) {
-    const all = el("button", "chip" + (selected === "all" ? " on" : ""), t("today.all"));
-    all.addEventListener("click", () => onPick("all"));
-    chips.push(all);
+  };
+  const allChip = () =>
+    chip("all", t("today.all"));
+  let chips;
+  const home = session.home.filter((c) => codes.includes(c));
+  if (withAll && codes.length > 5 && home.length && home.length < codes.length) {
+    chips = [
+      ...home.map((c) => chip(c)),
+      allChip(),
+      ...codes.filter((c) => !home.includes(c)).map((c) => chip(c)),
+    ];
+  } else {
+    chips = codes.map((c) => chip(c));
+    if (withAll && codes.length > 1) chips.push(allChip());
   }
   container.replaceChildren(...chips);
+  hintScroll(container);
+}
+
+/* Fade the row's right edge while there is more to scroll to — eleven
+ * sites do not fit a phone, and a hard clip reads as "that is all". */
+function hintScroll(el) {
+  if (!el.dataset.hinted) {
+    el.dataset.hinted = "1";
+    el.addEventListener("scroll", () => hintScroll(el), { passive: true });
+  }
+  el.classList.toggle(
+    "more", el.scrollWidth - el.clientWidth - el.scrollLeft > 8);
 }
 
 function greetKey() {
@@ -736,6 +789,7 @@ async function loadToday(pending) {
     if (seq !== _todaySeq) return;
     App.all = data.items;
     App.reviews = data.reviews || {};
+    if (data.sites) session.setSites(data.sites, data.home_sites);
 
     // "What changed while I was away?" — marked once per fetch, over every
     // site, so a mark does not depend on which site happened to be open.
@@ -1133,7 +1187,7 @@ function renderLogForm() {
     site = code;
     // All four sites: a supervisor visiting another site logs there
     // directly; the default stays the person's own site.
-    renderSiteChips($("log-sites"), site, pickSite, false, true);
+    renderSiteChips($("log-sites"), site, pickSite, false);
   }
   pickSite(site);
 
@@ -1274,7 +1328,7 @@ async function renderMoves() {
   const pick = (code) => {
     site = code;
     App.movesSite = code;
-    renderSiteChips($("mv-sites"), site, pick, true, true);
+    renderSiteChips($("mv-sites"), site, pick, true);
     draw();
   };
 
@@ -1348,7 +1402,7 @@ function renderLeaveIntro() {
     App.leave.site = code;
     // All four sites, like Log and Moves: a supervisor covering another
     // site must be able to run its check before going off.
-    renderSiteChips($("leave-sites"), site, pick, false, true);
+    renderSiteChips($("leave-sites"), site, pick, false);
     drawCount(null);
     $("leave-review").hidden = true;
     const mySeq = (pick._seq = (pick._seq || 0) + 1);
