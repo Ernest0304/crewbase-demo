@@ -102,7 +102,6 @@ input.pin {
   transition: background var(--speed) ease, transform var(--speed) ease;
 }
 .btn:hover { background: var(--paper); }
-.btn:active { transform: scale(0.985); }
 .btn.primary { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
 .btn.primary:hover { background: #F5DE00; }
 .btn.ghost { border-color: var(--line); background: none; }
@@ -147,12 +146,18 @@ input.pin {
 .hero-head.tight .hero-chips { margin-top: 12px; }
 .hero-head .who { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .hero-head .avatar { width: 42px; height: 42px; font-size: 15px; }
-.hero-head .linkbtn { color: rgba(255, 255, 255, 0.8); font-size: 12.5px; padding: 2px 0; min-height: 0; white-space: nowrap; }
+/* Small to the eye, full-size to the thumb: the visible link stays 12.5px
+   but the tappable box is 44px tall (negative margin keeps the layout as
+   if it were still 2px padding). It sits alone at the hero edge, so the
+   oversized hit area cannot overlap a neighbour. */
+.hero-head .linkbtn { color: rgba(255, 255, 255, 0.8); font-size: 12.5px;
+  padding: 12px 0 12px 12px; margin: -10px 0 -10px -12px; min-height: 44px;
+  white-space: nowrap; }
 .hero-head .linkbtn:hover { color: #fff; opacity: 1; }
 .hero-chips { margin-top: 16px; }
 .hero-chips .chip {
   background: transparent; border-color: rgba(255, 255, 255, 0.28);
-  color: rgba(255, 255, 255, 0.85); min-height: 42px;
+  color: rgba(255, 255, 255, 0.85); min-height: 44px;
 }
 .hero-chips .chip:hover { border-color: #fff; color: #fff; }
 .hero-chips .chip.on {
@@ -171,7 +176,7 @@ input.pin {
   display: block; font-size: 24px; font-weight: 750; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.stat .lbl { display: block; font-size: 11px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.stat .lbl { display: block; font-size: 12px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
 .stat.s-stale .num { color: var(--acc-wine); }
 .stat.s-undated .num { color: var(--acc-blue); }
 .stat.zero .num { color: #8A8A8A; }
@@ -199,7 +204,7 @@ input.pin {
 
 /* segmented control: one joined field */
 .chips.seg { gap: 0; background: #E8E8E8; border-radius: var(--pill); padding: 3px; width: max-content; max-width: 100%; }
-.chips.seg .chip { border: 0; background: none; border-radius: var(--pill); min-height: 42px; }
+.chips.seg .chip { border: 0; background: none; border-radius: var(--pill); min-height: 44px; }
 .chips.seg .chip.on { background: var(--ink); color: var(--bright); }
 
 /* ---- login: ink hero + off-white sheet ----------------------------------- */
@@ -552,6 +557,22 @@ button.addtile:hover { border-color: var(--ink); color: var(--ink); }
  * specific selector has outranked the UA default and resurrected a
  * hidden screen. Never again. */
 [hidden] { display: none !important; }
+
+/* ---- pressed states: a phone has no hover -------------------------------- */
+/* Feedback inside 150ms of the finger landing, before any network answers.
+   transform+background only, so nothing around the control moves. */
+/* Colour keeps the theme's 180ms; only the press transform is faster, so a
+   tap answers inside 150ms while hovers fade at the pace the guide set. */
+.chip, .card, .namelist button, .recentlist button.recent, .btn, #nav button {
+  transition: background var(--speed) ease, border-color var(--speed) ease,
+              color var(--speed) ease, transform 120ms ease;
+}
+.chip:active { transform: scale(0.97); }
+.card:active { background: #F4F4F4; transform: scale(0.99); }
+.namelist button:active, .recentlist button.recent:active { background: #ECECEC; transform: scale(0.99); }
+.btn:active { transform: scale(0.97); }
+#nav button:active span:first-child { transform: scale(0.9); }
+#nav button span:first-child { transition: transform 120ms ease; }
 
 /* Demo banner — says what the page is before anyone has to ask. */
 .demo-note {
